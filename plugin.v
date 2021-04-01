@@ -9,7 +9,7 @@ mut:
 	options       map[string]json2.Any
 
 	client        Client
-	hooks         map[string]fn (Plugin, json2.Any) ?json2.Any = map{}
+    hooks         map[string]fn (Plugin, json2.Any) ?string = map{}
 	subscriptions map[string]fn (Plugin, json2.Any) = map{}
 }
 
@@ -20,8 +20,7 @@ fn (mut p Plugin) initialize() {
 		line := os.get_line()
 
 		raw_message := json2.raw_decode(line) or { continue }
-
-		eprintln("read json '$raw_message'")
+		eprintln("read json $raw_message")
 
 		message := raw_message.as_map()
 		mut response := map{
@@ -31,7 +30,7 @@ fn (mut p Plugin) initialize() {
 		}
 		match message['method'].str() {
 			'getmanifest' {
-				mut hooks := []json2.Any{cap: p.hooks.len}
+				mut hooks := []json2.Any{len: p.hooks.len, init: json2.Any('')}
 				mut i := 0
 				for k, _ in p.hooks {
 					hooks[i] = json2.Any(map{
@@ -49,21 +48,22 @@ fn (mut p Plugin) initialize() {
 					i += 1
 				}
 
-				response['result'] = json2.Any(map{
-					'options':       json2.Any([]json2.Any{cap: 0})
-					'hooks':         hooks
-					'rpcmethods':    json2.Any([
-						json2.Any(map{
-							'name':             json2.Any('sendhconion')
-							'usage':            json2.Any('')
-							'description':      json2.Any('sends an onion')
-							'long_description': json2.Any('')
-						}),
-					])
-					'subscriptions': subscriptions
-					'features':      json2.Any('')
-					'dynamic':       json2.Any(false)
-				})
+				mut result := map[string]json2.Any{}
+				result['options'] = json2.Any([]json2.Any{cap: 0})
+				result['rpcmethods'] = json2.Any([
+					json2.Any(map{
+						'name':             json2.Any('sendhconion')
+						'usage':            json2.Any('')
+						'description':      json2.Any('sends an onion')
+						'long_description': json2.Any('')
+					}),
+				])
+				result['hooks'] = hooks
+				result['subscriptions'] = subscriptions
+				result['features'] = json2.Any('')
+				result['dynamic'] = json2.Any(false)
+
+				response['result'] = result
 			}
 			'init' {
 				conf := message['configuration'].as_map()
@@ -84,12 +84,13 @@ fn (mut p Plugin) initialize() {
 				for {
 					if method in p.hooks {
 						hook := p.hooks[method]
-						response['result'] = hook(p, message) or {
+						if result := hook(p, message) {
+							response['result'] = result
+						} else {
 							response['error'] = map{
 								'code':    json2.Any(err.code)
 								'message': json2.Any(err.msg)
 							}
-							break
 						}
 						break
 					}

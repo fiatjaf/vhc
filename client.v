@@ -18,7 +18,7 @@ fn (c Client) call(method string, params ...json2.Any) ?json2.Any {
 		'version': json2.Any(2)
 		'id':      json2.Any(0)
 		'method':  json2.Any(method)
-		'params':  params
+		'params':  json2.Any(params)
 	})
 	stream.write_string(command.json_str()) or {
 		panic('failed to write to unix socket $c.path: $err.msg')
@@ -33,5 +33,7 @@ fn (c Client) call(method string, params ...json2.Any) ?json2.Any {
 		return error(val['error'].as_map()['message'].str())
 	}
 
-	return val['result']
+	return val['result'] or {
+		map[string]json2.Any{}
+	}
 }

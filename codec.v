@@ -17,7 +17,8 @@ fn (mut t InvokeHostedChannel) decode(b []byte) {
 	mut r := Reader{
 		buf: b
 	}
-	t.chainhash = r.read_32()
+
+	r.read_32(mut t.chainhash)
 	t.refund_script_pub_key = r.read_dynamic()
 	t.secret = r.read_dynamic()
 }

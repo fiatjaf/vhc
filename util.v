@@ -17,14 +17,12 @@ mut:
 	pos u16
 }
 
-fn (mut r Reader) read_32() [32]byte {
-	mut res := [32]byte{}
+fn (mut r Reader) read_32(mut ba [32]byte) {
 	next := r.pos + 32
 	for i, b in r.buf[r.pos..next] {
-		res[i] = b
+		ba[i] = b
 	}
 	r.pos = next
-	return res
 }
 
 fn (mut r Reader) read_u16() u16 {
