@@ -9,9 +9,12 @@ mut:
 	options       map[string]json2.Any
 
 	client        Client
-    hooks         map[string]fn (Plugin, json2.Any) ?string = map{}
-	subscriptions map[string]fn (Plugin, json2.Any) = map{}
+	hooks         map[string]HookHandler = map{}
+	subscriptions map[string]SubscriptionHandler = map{}
 }
+
+type HookHandler = fn (Plugin, json2.Any) ?string
+type SubscriptionHandler = fn (Plugin, json2.Any)
 
 fn (mut p Plugin) initialize() {
 	eprintln('running vhc plugin')
@@ -20,11 +23,10 @@ fn (mut p Plugin) initialize() {
 		line := os.get_line()
 
 		raw_message := json2.raw_decode(line) or { continue }
-		eprintln("read json $raw_message")
-
 		message := raw_message.as_map()
+		dump(message)
 		mut response := map{
-			'jsonrpc': json2.Any('')
+			'jsonrpc': json2.Any('2.0')
 			'version': message['version'] or { 0 }
 			'id':      message['id']
 		}
@@ -42,9 +44,7 @@ fn (mut p Plugin) initialize() {
 				mut subscriptions := []json2.Any{cap: p.subscriptions.len}
 				i = 0
 				for k, _ in p.subscriptions {
-					subscriptions[i] = json2.Any(map{
-						'name': json2.Any(k)
-					})
+					subscriptions[i] = json2.Any([json2.Any(k)])
 					i += 1
 				}
 
@@ -73,14 +73,9 @@ fn (mut p Plugin) initialize() {
 
 				p.client = Client{p.rpc_file}
 				p.options = message['options'].as_map()
-
-				print(response)
-				os.flush()
 			}
 			else {
-				dump(message)
 				method := message['method'].str()
-
 				for {
 					if method in p.hooks {
 						hook := p.hooks[method]
@@ -106,6 +101,7 @@ fn (mut p Plugin) initialize() {
 			}
 		}
 
+		dump(response)
 		print(response)
 		os.flush()
 	}
