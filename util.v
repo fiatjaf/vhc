@@ -27,57 +27,52 @@ fn (mut r Reader) read_32(mut ba [32]byte) {
 
 fn (mut r Reader) read_u16() u16 {
 	next := r.pos + 2
-	defer {
-		r.pos = next
-	}
-	return binary.big_endian_u16(r.buf[r.pos..next])
+	res := binary.big_endian_u16(r.buf[r.pos..next])
+	r.pos = next
+	return res
 }
 
 fn (mut r Reader) read_u64() u64 {
 	next := r.pos + 4
-	defer {
-		r.pos = next
-	}
-	return binary.big_endian_u64(r.buf[r.pos..next])
+	res := binary.big_endian_u64(r.buf[r.pos..next])
+	r.pos = next
+	return res
 }
 
 fn (mut r Reader) read_dynamic() []byte {
 	size := r.read_u16()
 	next := r.pos + size
-	defer {
-		r.pos = next
-	}
-	return r.buf[r.pos..next]
+	res := r.buf[r.pos..next]
+	r.pos = next
+	return res
 }
 
 struct Writer {
 mut:
 	buf []byte
-	pos int
 }
 
 fn (mut w Writer) write_32(data [32]byte) {
-	for _, b in data {
-		w.buf[w.pos] = b
-		w.pos = w.pos + 1
+	mut tmp := []byte{len: 32, init: `0`}
+	for i, b in data {
+		tmp[i] = b
 	}
+	w.buf << tmp
 }
 
 fn (mut w Writer) write_u16(data u16) {
-	next := w.pos + 2
-	binary.big_endian_put_u16(mut w.buf[w.pos..next], data)
-	w.pos = next
+	mut tmp := []byte{len: 2, init: `0`}
+	binary.big_endian_put_u16(mut tmp, data)
+	w.buf << tmp
 }
 
 fn (mut w Writer) write_u64(data u64) {
-	next := w.pos + 4
-	binary.big_endian_put_u64(mut w.buf[w.pos..next], data)
-	w.pos = next
+	mut tmp := []byte{len: 8, init: `0`}
+	binary.big_endian_put_u64(mut tmp, data)
+	w.buf << tmp
 }
 
 fn (mut w Writer) write_dynamic(data []byte) {
 	w.write_u16(u16(data.len))
-	next := w.pos + data.len
-	w.buf[w.pos..next] = data
-	w.pos = next
+	w.buf << data
 }

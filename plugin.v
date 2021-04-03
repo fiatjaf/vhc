@@ -13,7 +13,7 @@ mut:
 	subscriptions map[string]SubscriptionHandler = map{}
 }
 
-type HookHandler = fn (Plugin, json2.Any) ?string
+type HookHandler = fn (Plugin, json2.Any) ?json2.Any
 type SubscriptionHandler = fn (Plugin, json2.Any)
 
 fn (mut p Plugin) initialize() {
@@ -66,12 +66,12 @@ fn (mut p Plugin) initialize() {
 				response['result'] = result
 			}
 			'init' {
-				conf := message['configuration'].as_map()
+				params := message['params'].as_map()
+				conf := params['configuration'].as_map()
 				p.lightning_dir = conf['lightning-dir'].str()
 				p.rpc_file = conf['rpc-file'].str()
 				p.network = conf['network'].str()
-
-				p.client = Client{p.rpc_file}
+				p.client = Client{p.lightning_dir + '/' + p.rpc_file}
 				p.options = message['options'].as_map()
 			}
 			else {
@@ -79,7 +79,7 @@ fn (mut p Plugin) initialize() {
 				for {
 					if method in p.hooks {
 						hook := p.hooks[method]
-						if result := hook(p, message) {
+						if result := hook(p, message['params']) {
 							response['result'] = result
 						} else {
 							response['error'] = map{
@@ -92,7 +92,7 @@ fn (mut p Plugin) initialize() {
 
 					if method in p.subscriptions {
 						subs := p.subscriptions[method]
-						subs(p, message)
+						subs(p, message['params'])
 						break
 					}
 

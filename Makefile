@@ -1,2 +1,2 @@
 vhc: $(shell find . -name "*.v")
-	v .
+	v -keepc .

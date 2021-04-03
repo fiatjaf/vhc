@@ -10,7 +10,7 @@ fn main() {
 	plugin.initialize()
 }
 
-fn handle_custommsg(p Plugin, jsonparams json2.Any) ?string {
+fn handle_custommsg(p Plugin, jsonparams json2.Any) ?json2.Any {
 	params := jsonparams.as_map()
 	peer := params['peer_id'].str()
 	payload := params['payload'].str()
@@ -19,13 +19,11 @@ fn handle_custommsg(p Plugin, jsonparams json2.Any) ?string {
 
 	dump(peer)
 	dump(typ)
-	dump(message)
+	dump(message.hex())
 	match typ {
 		type_invoke_hosted_channel {
 			mut t := InvokeHostedChannel{}
 			t.decode(message)
-			dump(message)
-			dump(t)
 			rt := InitHostedChannel{
 				max_htlc_value_in_flight_msat: 100000000
 				htlc_minimum_msat: 1000
@@ -36,18 +34,15 @@ fn handle_custommsg(p Plugin, jsonparams json2.Any) ?string {
 				initial_client_balance_msat: 0
 				features: []byte{}
 			}
-			dump(rt)
 			init := type_init_hosted_channel.hex() + rt.encode().hex()
-			dump(init)
 			p.client.call('dev-sendcustommsg', peer, init) or {
-				eprintln('failed to call dev-sendcustommsg in response to invoke_hosted_channel: $err.msg')
+				eprintln('failed to call dev-sendcustommsg in response to invoke_hosted_channel: $err')
 			}
-			return json2.Any(map{
-				'result': json2.Any('continue')
-			}).json_str()
 		}
 		else {}
 	}
 
-	return ''
+	return map{
+		'result': json2.Any('continue')
+	}
 }
