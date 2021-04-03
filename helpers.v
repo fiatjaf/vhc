@@ -1,4 +1,31 @@
+import os
+import crypto.hmac
 import crypto.sha256
+import fiatjaf.vlightning
+
+fn get_node_key(p vlightning.Plugin) ?[32]byte {
+	hsm_secret := os.read_bytes(p.lightning_dir + '/hsm_secret') or {
+		return error('failed to read ${p.lightning_dir + '/hsm_secret'}: $err')
+	}
+
+	// fake hkdf with fixed params
+	salt := [byte(0)]
+	info := 'nodeid'.bytes()
+	prk := hmac.new(salt, hsm_secret, sha256.sum256, 32)
+	mut output_block := []byte{}
+
+	mut buf := []byte{}
+	buf << output_block
+	buf << info
+	buf << byte(0)
+	output := hmac.new(prk, buf, sha256.sum256, 32)
+
+	mut res := [32]byte{}
+	for i := 0; i < 32; i++ {
+		res[i] = output[i]
+	}
+	return res
+}
 
 fn reversed_state(t LastCrossSignedState) LastCrossSignedState {
 	return {
@@ -9,12 +36,10 @@ fn reversed_state(t LastCrossSignedState) LastCrossSignedState {
 		remote_updates: t.local_updates
 		incoming_htlcs: t.outgoing_htlcs
 		outgoing_htlcs: t.incoming_htlcs
-		local_sig_of_remote: t.remote_sig_of_local
-		remote_sig_of_local: t.local_sig_of_remote
 	}
 }
 
-fn sign_state(t LastCrossSignedState) []byte {
+fn sign_state(t LastCrossSignedState, node_key [32]byte) ?[]byte {
 	cap_needed := (t.refund_script_pub_key.len + 4 * 3 + 8 * 5 + (4 + 8 + 8 + 32 + 4 +
 		1366) * (t.incoming_htlcs.len + t.outgoing_htlcs.len))
 
@@ -40,5 +65,5 @@ fn sign_state(t LastCrossSignedState) []byte {
 		w.write_encodable(outgoing_htlc)
 	}
 
-	return sha256.sum256(w.buf)
+	return sign(sha256.sum256(w.buf), node_key)
 }
