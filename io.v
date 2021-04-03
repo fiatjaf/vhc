@@ -80,7 +80,7 @@ fn (mut r Reader) read_dynamic() ?[]byte {
 	return res
 }
 
-fn (mut r Reader) read_decodable(dec HostedChannelMessageDecodable) ?int {
+fn (mut r Reader) read_decodable(mut dec HostedChannelMessageDecodable) ?int {
 	size := dec.decode(r.buf[r.pos..]) ?
 	r.pos += size
 	return size

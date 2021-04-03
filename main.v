@@ -1,8 +1,11 @@
 import x.json2
 import strconv
+import fiatjaf.vlightning
 
 fn main() {
-	mut plugin := Plugin{
+	mut plugin := vlightning.Plugin{
+		name: 'vhc'
+		version: '0.1'
 		hooks: map{
 			'custommsg': handle_custommsg
 		}
@@ -10,7 +13,7 @@ fn main() {
 	plugin.initialize()
 }
 
-fn handle_custommsg(p Plugin, jsonparams json2.Any) ?json2.Any {
+fn handle_custommsg(p vlightning.Plugin, jsonparams json2.Any) ?json2.Any {
 	params := jsonparams.as_map()
 	peer := params['peer_id'].str()
 	payload := params['payload'].str()
@@ -24,14 +27,19 @@ fn handle_custommsg(p Plugin, jsonparams json2.Any) ?json2.Any {
 		match typ {
 			type_invoke_hosted_channel {
 				mut t := InvokeHostedChannel{}
+				p.log('got invoke_hosted_channel from $peer')
 
 				t.decode(message) or {
-					eprintln('got broken invoke_hosted_channel: $err')
+					p.log('got broken invoke_hosted_channel: $err')
 					break
 				}
 
 				if channel := get_channel(peer) {
 					// a hosted channel with this peer already exists
+					last := type_last_cross_signed_state.hex() + channel.last_cross_signed_state
+					p.client.call('dev-sendcustommsg', peer, last) or {
+						p.log('failed to call dev-sendcustommsg with last_cross_signed_state: $err')
+					}
 				} else {
 					// create a new hosted channel
 					rt := InitHostedChannel{
@@ -46,7 +54,7 @@ fn handle_custommsg(p Plugin, jsonparams json2.Any) ?json2.Any {
 					}
 					init := type_init_hosted_channel.hex() + rt.encode().hex()
 					p.client.call('dev-sendcustommsg', peer, init) or {
-						eprintln('failed to call dev-sendcustommsg in response to invoke_hosted_channel: $err')
+						p.log('failed to call dev-sendcustommsg with init_hosted_channel: $err')
 					}
 				}
 			}
