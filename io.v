@@ -39,6 +39,16 @@ fn (mut r Reader) read_1366(mut ba [1366]byte) ? {
 	r.pos = next
 }
 
+fn (mut r Reader) read_bool() ?bool {
+	next := r.pos + 1
+	if r.buf.len < next {
+		return error('buffer has less than 1 remaining bytes ($r.buf.len)')
+	}
+	res := r.buf[r.pos] != `0`
+	r.pos = next
+	return res
+}
+
 fn (mut r Reader) read_u16() ?u16 {
 	next := r.pos + 2
 	if r.buf.len < next {
@@ -115,6 +125,13 @@ fn (mut w Writer) write_1366(data [1366]byte) {
 	w.buf << tmp
 }
 
+fn (mut w Writer) write_bool(data bool) {
+	w.buf << match data {
+		true { `1` }
+		false { `0` }
+	}
+}
+
 fn (mut w Writer) write_u16(data u16) {
 	mut tmp := []byte{len: 2, init: `0`}
 	binary.big_endian_put_u16(mut tmp, data)
@@ -140,4 +157,22 @@ fn (mut w Writer) write_dynamic(data []byte) {
 
 fn (mut w Writer) write_encodable(enc HostedChannelMessageEncodable) {
 	w.buf << enc.encode()
+}
+
+fn (mut w Writer) write_little_u16(data u16) {
+	mut tmp := []byte{len: 2, init: `0`}
+	binary.little_endian_put_u16(mut tmp, data)
+	w.buf << tmp
+}
+
+fn (mut w Writer) write_little_u32(data u32) {
+	mut tmp := []byte{len: 2, init: `0`}
+	binary.little_endian_put_u32(mut tmp, data)
+	w.buf << tmp
+}
+
+fn (mut w Writer) write_little_u64(data u64) {
+	mut tmp := []byte{len: 8, init: `0`}
+	binary.little_endian_put_u64(mut tmp, data)
+	w.buf << tmp
 }

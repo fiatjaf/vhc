@@ -38,7 +38,7 @@ fn handle_custommsg(p vlightning.Plugin, jsonparams json2.Any) ?json2.Any {
 					// a hosted channel with this peer already exists
 					last := type_last_cross_signed_state.hex() + channel.last_cross_signed_state
 					p.client.call('dev-sendcustommsg', peer, last) or {
-						p.log('failed to call dev-sendcustommsg with last_cross_signed_state: $err')
+						p.log('failed sendcustommsg last_cross_signed_state: $err')
 					}
 				} else {
 					// create a new hosted channel
@@ -54,8 +54,17 @@ fn handle_custommsg(p vlightning.Plugin, jsonparams json2.Any) ?json2.Any {
 					}
 					init := type_init_hosted_channel.hex() + rt.encode().hex()
 					p.client.call('dev-sendcustommsg', peer, init) or {
-						p.log('failed to call dev-sendcustommsg with init_hosted_channel: $err')
+						p.log('failed sendcustommsg init_hosted_channel: $err')
 					}
+				}
+			}
+			type_state_update {
+				mut t := StateUpdate{}
+				p.log('got state_update from $peer')
+
+				t.decode(message) or {
+					p.log('got broken state_update: $err')
+					break
 				}
 			}
 			else {}

@@ -100,17 +100,18 @@ fn (t InitHostedChannel) encode() []byte {
 
 struct LastCrossSignedState {
 mut:
-	last_refund_scriptpubkey []byte
-	init_hosted_channel      InitHostedChannel
-	block_day                u32
-	local_balance_msat       u64
-	remote_balance_msat      u64
-	local_updates            u32
-	remote_updates           u32
-	incoming_htlcs           []UpdateAddHTLC
-	outgoing_htlcs           []UpdateAddHTLC
-	remote_sig_of_local      [64]byte
-	local_sig_of_remote      [64]byte
+	is_host               bool
+	refund_script_pub_key []byte
+	init_hosted_channel   InitHostedChannel
+	block_day             u32
+	local_balance_msat    u64
+	remote_balance_msat   u64
+	local_updates         u32
+	remote_updates        u32
+	incoming_htlcs        []UpdateAddHTLC
+	outgoing_htlcs        []UpdateAddHTLC
+	remote_sig_of_local   [64]byte
+	local_sig_of_remote   [64]byte
 }
 
 fn (mut t LastCrossSignedState) decode(b []byte) ?int {
@@ -118,7 +119,8 @@ fn (mut t LastCrossSignedState) decode(b []byte) ?int {
 		buf: b
 	}
 
-	t.last_refund_scriptpubkey = r.read_dynamic() ?
+	t.is_host = r.read_bool() ?
+	t.refund_script_pub_key = r.read_dynamic() ?
 	r.read_decodable(mut t.init_hosted_channel) ?
 	t.block_day = r.read_u32() ?
 	t.local_balance_msat = r.read_u64() ?
@@ -148,7 +150,8 @@ fn (t LastCrossSignedState) encode() []byte {
 		buf: []byte{cap: 3000}
 	}
 
-	w.write_dynamic(t.last_refund_scriptpubkey)
+	w.write_bool(t.is_host)
+	w.write_dynamic(t.refund_script_pub_key)
 	w.write_encodable(t.init_hosted_channel)
 	w.write_u32(t.block_day)
 	w.write_u64(t.local_balance_msat)
@@ -166,6 +169,40 @@ fn (t LastCrossSignedState) encode() []byte {
 	}
 
 	w.write_64(t.remote_sig_of_local)
+	w.write_64(t.local_sig_of_remote)
+
+	return w.buf
+}
+
+struct StateUpdate {
+mut:
+	block_day           u32
+	local_updates       u32
+	remote_updates      u32
+	local_sig_of_remote [64]byte
+}
+
+fn (mut t StateUpdate) decode(b []byte) ?int {
+	mut r := Reader{
+		buf: b
+	}
+
+	t.block_day = r.read_u32() ?
+	t.local_updates = r.read_u32() ?
+	t.remote_updates = r.read_u32() ?
+	r.read_64(mut t.local_sig_of_remote) ?
+
+	return r.pos
+}
+
+fn (t StateUpdate) encode() []byte {
+	mut w := Writer{
+		buf: []byte{cap: 4 + 4 + 4 + 64}
+	}
+
+	w.write_u32(t.block_day)
+	w.write_u32(t.local_updates)
+	w.write_u32(t.remote_updates)
 	w.write_64(t.local_sig_of_remote)
 
 	return w.buf
