@@ -3,7 +3,7 @@ import crypto.hmac
 import crypto.sha256
 import fiatjaf.vlightning
 
-fn get_node_key(p vlightning.Plugin) ?[32]byte {
+fn get_node_key(p vlightning.Plugin) ?[]byte {
 	hsm_secret := os.read_bytes(p.lightning_dir + '/hsm_secret') or {
 		return error('failed to read ${p.lightning_dir + '/hsm_secret'}: $err')
 	}
@@ -18,13 +18,8 @@ fn get_node_key(p vlightning.Plugin) ?[32]byte {
 	buf << output_block
 	buf << info
 	buf << byte(0)
-	output := hmac.new(prk, buf, sha256.sum256, 32)
 
-	mut res := [32]byte{}
-	for i := 0; i < 32; i++ {
-		res[i] = output[i]
-	}
-	return res
+	return hmac.new(prk, buf, sha256.sum256, 32)
 }
 
 fn reversed_state(t LastCrossSignedState) LastCrossSignedState {
@@ -39,7 +34,7 @@ fn reversed_state(t LastCrossSignedState) LastCrossSignedState {
 	}
 }
 
-fn sign_state(t LastCrossSignedState, node_key [32]byte) ?[]byte {
+fn sign_state(t LastCrossSignedState, node_key []byte) ?[]byte {
 	cap_needed := (t.refund_script_pub_key.len + 4 * 3 + 8 * 5 + (4 + 8 + 8 + 32 + 4 +
 		1366) * (t.incoming_htlcs.len + t.outgoing_htlcs.len))
 
@@ -65,5 +60,20 @@ fn sign_state(t LastCrossSignedState, node_key [32]byte) ?[]byte {
 		w.write_encodable(outgoing_htlc)
 	}
 
-	return sign(sha256.sum256(w.buf), node_key)
+	return sign(sha256.sum256(w.buf), node_key) or {
+		sighash_hex := sha256.sum256(w.buf).hex()
+		nodekey_hex := node_key[0..32].hex()
+		return error('failed to sign($sighash_hex, $nodekey_hex: $err')
+	}
+}
+
+fn get_blockday(p vlightning.Plugin) ?u32 {
+	chain_info := p.client.call('getchaininfo') ?
+	headercount := chain_info.as_map()['headercount'].int()
+
+	if headercount == 0 {
+		return error('headercount from getchaininfo is invalid: $chain_info.str()')
+	}
+
+	return u32(headercount)
 }

@@ -1,27 +1,27 @@
 const (
-	type_invoke_hosted_channel                = i64(65535)
-	type_init_hosted_channel                  = i64(65533)
-	type_last_cross_signed_state              = i64(65531)
-	type_state_update                         = i64(65529)
-	type_state_override                       = i64(65527)
+	type_invoke_hosted_channel            = i64(65535)
+	type_init_hosted_channel              = i64(65533)
+	type_last_cross_signed_state          = i64(65531)
+	type_state_update                     = i64(65529)
+	type_state_override                   = i64(65527)
 
-	type_hosted_channel_branding_tag          = i64(65525)
-	type_refund_pending_tag                   = i64(65523)
-	type_announcement_signature_tag           = i64(65521)
-	type_resize_channel_tag                   = i64(65519)
-	type_query_public_hosted_channels_tag     = i64(65517)
-	type_reply_public_hosted_channels_end_tag = i64(65515)
+	type_hosted_channel_branding          = i64(65525)
+	type_refund_pending                   = i64(65523)
+	type_announcement_signature           = i64(65521)
+	type_resize_channel                   = i64(65519)
+	type_query_public_hosted_channels     = i64(65517)
+	type_reply_public_hosted_channels_end = i64(65515)
 
-	type_announce_gossip_tag                  = i64(65513)
-	type_announce_sync_tag                    = i64(65511)
-	type_update_gossip_tag                    = i64(65509)
-	type_update_sync_tag                      = i64(65507)
+	type_announce_gossip                  = i64(65513)
+	type_announce_sync                    = i64(65511)
+	type_update_gossip                    = i64(65509)
+	type_update_sync                      = i64(65507)
 
-	type_update_add_htlc_tag                  = i64(65505)
-	type_update_fulfill_htlc_tag              = i64(65503)
-	type_update_fail_htlc_tag                 = i64(65501)
-	type_update_fail_malformed_htlc_tag       = i64(65499)
-	type_error_tag                            = i64(65497)
+	type_update_add_htlc                  = i64(65505)
+	type_update_fulfill_htlc              = i64(65503)
+	type_update_fail_htlc                 = i64(65501)
+	type_update_fail_malformed_htlc       = i64(65499)
+	type_error                            = i64(65497)
 )
 
 interface HostedChannelMessageDecodable {
@@ -61,6 +61,10 @@ mut:
 	minimal_onchain_refund_amount_satoshis u64
 	initial_client_balance_msat            u64
 	features                               []byte
+}
+
+fn (t InitHostedChannel) message() string {
+	return type_init_hosted_channel.hex() + t.encode().hex()
 }
 
 fn (mut t InitHostedChannel) decode(b []byte) ?int {
@@ -112,6 +116,10 @@ mut:
 	outgoing_htlcs        []UpdateAddHTLC
 	remote_sig_of_local   [64]byte
 	local_sig_of_remote   [64]byte
+}
+
+fn (t LastCrossSignedState) message() string {
+	return type_last_cross_signed_state.hex() + t.encode().hex()
 }
 
 fn (mut t LastCrossSignedState) decode(b []byte) ?int {
@@ -182,6 +190,10 @@ mut:
 	local_sig_of_remote [64]byte
 }
 
+fn (t StateUpdate) message() string {
+	return type_state_update.hex() + t.encode().hex()
+}
+
 fn (mut t StateUpdate) decode(b []byte) ?int {
 	mut r := Reader{
 		buf: b
@@ -216,6 +228,10 @@ mut:
 	payment_hash         [32]byte
 	cltv_expiry          u32
 	onion_routing_packet [1366]byte
+}
+
+fn (t UpdateAddHTLC) message() string {
+	return type_update_add_htlc.hex() + t.encode().hex()
 }
 
 fn (mut t UpdateAddHTLC) decode(b []byte) ?int {

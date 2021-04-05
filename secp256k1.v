@@ -5,10 +5,10 @@
 
 fn C.secp256k1_context_create(u32) &C.secp256k1_context
 fn C.secp256k1_context_destroy(&C.secp256k1_context)
-fn C.secp256k1_ecdsa_sign_recoverable(&C.secp256k1_context, &C.secp256k1_ecdsa_recoverable_signature, charptr, charptr, voidptr, voidptr) int
-fn C.secp256k1_ecdsa_recoverable_signature_serialize_compact(&C.secp256k1_context, byteptr, &int, &C.secp256k1_ecdsa_recoverable_signature) int
+fn C.secp256k1_ecdsa_sign_recoverable(&C.secp256k1_context, &C.secp256k1_ecdsa_recoverable_signature, &char, &char, voidptr, voidptr) int
+fn C.secp256k1_ecdsa_recoverable_signature_serialize_compact(&C.secp256k1_context, &byte, &int, &C.secp256k1_ecdsa_recoverable_signature) int
 
-fn sign(sighash []byte, key [32]byte) ?[]byte {
+fn sign(sighash []byte, key []byte) ?[]byte {
 	unsafe {
 		ctx := C.secp256k1_context_create(C.SECP256K1_CONTEXT_SIGN)
 		defer {
